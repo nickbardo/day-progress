@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waking Day Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: day progress and year countdown side by side on wide screens, goals full width below; stacks on narrow */
+:root {
+  --bg: #f6f7f5;
+  --card: #ffffff;
+  --fg: #1d2420;
+  --muted: #6c7670;
+  --line: #e1e5e2;
+  --dot-empty: #e4e8e5;
+  --dot-done: #2f5d4b;
+  --dot-now: #c8913a;
+  --tile: #f2f4f2;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --num-weight: 400;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141816; --card: #1b201d; --fg: #e8ece9; --muted: #8f9993; --line: #2a312d;
+    --dot-empty: #2a312d; --dot-done: #7fb79d; --dot-now: #e0ac58; --tile: #222824; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141816; --card: #1b201d; --fg: #e8ece9; --muted: #8f9993; --line: #2a312d;
+  --dot-empty: #2a312d; --dot-done: #7fb79d; --dot-now: #e0ac58; --tile: #222824; color-scheme: dark;
+}
+body { margin: 0;
+  background: var(--bg); color: var(--fg); font-family: var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px;
+}
+.board {
+  max-width: 860px; margin: 0 auto;
+  display: grid; gap: 14px; grid-template-columns: 1fr;
+}
+@media (min-width: 680px) {
+  .board { grid-template-columns: 1fr 1fr; }
+  .goals { grid-column: 1 / -1; }
+}
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px; display: grid; gap: 16px; align-content: start; min-width: 0;
+}
+.label {
+  margin: 0; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* Day progress */
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pct { font-family: var(--font-num); font-weight: var(--num-weight, 600); font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.pct small { font-size: 1.1rem; color: var(--muted); font-weight: 400; margin-left: 2px; }
+.status { text-align: right; display: grid; gap: 2px; }
+.status .left { font-weight: 600; font-size: 0.95rem; }
+.status .now { color: var(--muted); font-size: 0.8rem; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: 7px; }
+.dot { aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: var(--dot-empty); position: relative; overflow: hidden; }
+.dot.done { background: var(--dot-done); }
+.dot.now { background: var(--dot-empty); box-shadow: 0 0 0 2px var(--dot-now) inset; }
+.dot.now::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); background: var(--dot-now); }
+.scale { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Year countdown */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tile {
+  background: var(--tile); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 4px 10px; display: grid; justify-items: center; gap: 4px; min-width: 0;
+}
+.tile b { font-family: var(--font-num); font-weight: var(--num-weight, 600); font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.until { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.yearbar { height: 4px; background: var(--dot-empty); border-radius: 2px; overflow: hidden; }
+.yearbar span { display: block; height: 100%; background: var(--dot-done); width: 0; }
+
+/* Goals */
+.goal-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+@media (min-width: 680px) { .goal-list { grid-template-columns: repeat(3, 1fr); } }
+.goal-list li {
+  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start;
+  padding: 14px; border-radius: 10px; background: var(--tile); border: 1px solid var(--line); min-width: 0;
+}
+.num { font-family: var(--font-num); font-weight: var(--num-weight, 600); font-size: 1.3rem; line-height: 1.2; color: var(--dot-done); }
+.goal-text { font-size: 0.98rem; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
+.hint { margin: 0; color: var(--muted); font-size: 0.78rem; }
+.hint code { font-family: var(--font-num); font-size: 0.74rem; }
+
+@media (max-width: 380px) {
+  .grid { gap: 5px; } .pct { font-size: 2.1rem; }
+  .tile b { font-size: 1.45rem; } .tile span { font-size: 0.58rem; letter-spacing: 0.06em; }
+}
+</style>
+</head>
+<body>
+
+<main class="board">
+  <section class="card" aria-label="Day progress">
+    <h2 class="label">Today · 5:30 to 22:00</h2>
+    <div class="top">
+      <div class="pct" id="pct">0<small>%</small></div>
+      <div class="status">
+        <div class="left" id="left">–</div>
+        <div class="now" id="now">–</div>
+      </div>
+    </div>
+    <div class="grid" id="grid" aria-hidden="true"></div>
+    <div class="scale"><span>05:30</span><span>13:45</span><span>22:00</span></div>
+  </section>
+
+  <section class="card" aria-label="Year countdown">
+    <h2 class="label" id="year-label">Countdown</h2>
+    <div class="tiles">
+      <div class="tile"><b id="cd-d">0</b><span>Days</span></div>
+      <div class="tile"><b id="cd-h">0</b><span>Hours</span></div>
+      <div class="tile"><b id="cd-m">0</b><span>Mins</span></div>
+      <div class="tile"><b id="cd-s">0</b><span>Secs</span></div>
+    </div>
+    <div class="yearbar"><span id="yearbar"></span></div>
+    <p class="until" id="until">left until Jan 1</p>
+  </section>
+
+  <section class="card goals" aria-label="Top 3 goals">
+    <h2 class="label">Top 3 goals</h2>
+    <ol class="goal-list" id="goals"></ol>
+    <p class="hint" id="hint" hidden>Example goals. Set yours by adding <code>?g1=…&amp;g2=…&amp;g3=…</code> to the end of the embed link.</p>
+  </section>
+</main>
+
+
+<script>
+// ---- Day progress ----
+const START = 5 * 60 + 30;   // 5:30
+const END = 22 * 60;         // 22:00
+const SPAN = END - START;    // 990 minutes
+const BLOCK = 30;            // one dot per half hour
+const DOTS = SPAN / BLOCK;   // 33 dots
+
+const grid = document.getElementById('grid');
+for (let i = 0; i < DOTS; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot';
+  grid.appendChild(d);
+}
+const dots = grid.children;
+const pad = n => String(n).padStart(2, '0');
+
+function fmtLeft(min) {
+  const h = Math.floor(min / 60), m = Math.floor(min % 60);
+  return h === 0 ? m + 'm left' : h + 'h ' + pad(m) + 'm left';
+}
+
+function tickDay(n) {
+  const mins = n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60;
+  const elapsed = Math.min(Math.max(mins - START, 0), SPAN);
+  const pct = elapsed / SPAN * 100;
+
+  document.getElementById('pct').innerHTML = Math.floor(pct) + '<small>%</small>';
+  document.getElementById('now').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ' local';
+  document.getElementById('left').textContent =
+    mins < START ? 'Day starts at 5:30' : mins >= END ? 'Day complete' : fmtLeft(SPAN - elapsed);
+
+  const blocksDone = elapsed / BLOCK;
+  for (let i = 0; i < DOTS; i++) {
+    const el = dots[i];
+    el.classList.remove('done', 'now');
+    el.style.removeProperty('--fill');
+    if (i + 1 <= blocksDone) el.classList.add('done');
+    else if (i < blocksDone && mins < END) {
+      el.classList.add('now');
+      el.style.setProperty('--fill', ((blocksDone - i) * 100) + '%');
+    }
+  }
+}
+
+// ---- Year countdown ----
+function tickYear(n) {
+  const y = n.getFullYear();
+  const start = new Date(y, 0, 1);
+  const target = new Date(y + 1, 0, 1);
+  let diff = Math.max(0, target - n);
+  const d = Math.floor(diff / 86400000); diff -= d * 86400000;
+  const h = Math.floor(diff / 3600000);  diff -= h * 3600000;
+  const m = Math.floor(diff / 60000);    diff -= m * 60000;
+  const s = Math.floor(diff / 1000);
+  document.getElementById('cd-d').textContent = d;
+  document.getElementById('cd-h').textContent = pad(h);
+  document.getElementById('cd-m').textContent = pad(m);
+  document.getElementById('cd-s').textContent = pad(s);
+  document.getElementById('year-label').textContent = y + ' countdown';
+  const done = (n - start) / (target - start) * 100;
+  document.getElementById('yearbar').style.width = done + '%';
+  document.getElementById('until').textContent =
+    'left until Jan 1, ' + (y + 1) + ' · ' + Math.floor(done) + '% of ' + y + ' done';
+}
+
+// ---- Goals from the link: ?g1=...&g2=...&g3=... ----
+const EXAMPLES = ['Run a half marathon', 'Read 12 books', 'Save $5,000'];
+let params;
+try { params = new URLSearchParams(location.search); } catch (e) { params = new URLSearchParams(); }
+const fromLink = ['g1', 'g2', 'g3'].map(k => (params.get(k) || '').trim());
+const hasGoals = fromLink.some(Boolean);
+const goals = hasGoals ? fromLink : EXAMPLES;
+
+const list = document.getElementById('goals');
+goals.forEach((g, i) => {
+  if (!g) return;
+  const li = document.createElement('li');
+  const num = document.createElement('span');
+  num.className = 'num'; num.textContent = i + 1;
+  const txt = document.createElement('span');
+  txt.className = 'goal-text'; txt.textContent = g;
+  li.append(num, txt);
+  list.appendChild(li);
+});
+document.getElementById('hint').hidden = hasGoals;
+
+// ---- Run ----
+function tick() { const n = new Date(); tickDay(n); tickYear(n); }
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
